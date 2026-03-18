@@ -1,0 +1,67 @@
+name: Ruby Gem Build & Publish
+description: Build a Ruby gem and optionally publish to GitHub Packages (GPR) and/or RubyGems.org
+
+inputs:
+  ruby-version:
+    description: Ruby version to use
+    required: false
+    default: "3.3"
+  publish-gpr:
+    description: Publish to GitHub Packages (requires packages:write permission)
+    required: false
+    default: "true"
+  publish-rubygems:
+    description: Publish to RubyGems.org (requires RUBYGEMS_AUTH_TOKEN secret)
+    required: false
+    default: "false"
+  github-token:
+    description: GitHub token for GPR authentication (typically secrets.GITHUB_TOKEN)
+    required: false
+    default: ""
+  rubygems-auth-token:
+    description: RubyGems.org API key for publishing
+    required: false
+    default: ""
+  owner:
+    description: GitHub repository owner for GPR (defaults to github.repository_owner)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ inputs.ruby-version }}
+
+    - name: Build gem
+      shell: bash
+      run: gem build *.gemspec
+
+    - name: Publish to GitHub Packages
+      if: inputs.publish-gpr == 'true' && inputs.github-token != ''
+      shell: bash
+      run: |
+        OWNER="$INPUT_OWNER"
+        if [ -z "$OWNER" ]; then
+          OWNER="$GITHUB_REPOSITORY_OWNER"
+        fi
+        mkdir -p $HOME/.gem
+        printf -- "---\n:github: ${GEM_HOST_API_KEY}\n" > $HOME/.gem/credentials
+        chmod 0600 $HOME/.gem/credentials
+        gem push --key github --host "https://rubygems.pkg.github.com/${OWNER}" *.gem
+      env:
+        GEM_HOST_API_KEY: "Bearer ${{ inputs.github-token }}"
+        INPUT_OWNER: ${{ inputs.owner }}
+
+    - name: Publish to RubyGems.org
+      if: inputs.publish-rubygems == 'true' && inputs.rubygems-auth-token != ''
+      shell: bash
+      run: |
+        mkdir -p $HOME/.gem
+        printf -- "---\n:rubygems_api_key: ${GEM_HOST_API_KEY}\n" > $HOME/.gem/credentials
+        chmod 0600 $HOME/.gem/credentials
+        gem push *.gem
+      env:
+        GEM_HOST_API_KEY: ${{ inputs.rubygems-auth-token }}
