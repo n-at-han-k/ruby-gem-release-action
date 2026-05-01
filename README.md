@@ -1,5 +1,7 @@
 # Ruby Gem Build & Publish Action
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/n-at-han-k/ruby-gem-release-action)
+
 A reusable composite GitHub Action to build a Ruby gem and publish it to GitHub Packages (GPR) and/or RubyGems.org.
 
 ## Inputs
